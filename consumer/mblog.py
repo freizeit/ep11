@@ -14,8 +14,8 @@ from utils import config
 
 
 def handle_tweets(body, message):
-    pprint.pprint(body)
-    pprint.pprint(message)
+    print("\n")
+    print("=> %s :: %s" % (body["from_user"], body["text"]))
     message.ack()
 
 
