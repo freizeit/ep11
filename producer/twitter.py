@@ -18,11 +18,11 @@ from utils import config
 
 def pump_tweets(tweets, producer):
     for tweet in tweets["results"]:
-        from_user = tweet["from_user"]
-        to_user = tweet["to_user"]
-        iso_language_code = tweet["iso_language_code"]
-        text = tweet["text"]
-        created_at = tweet["created_at"]
+        from_user = tweet.get("from_user")
+        to_user = tweet.get("to_user")
+        iso_language_code = tweet.get("iso_language_code")
+        text = tweet.get("text")
+        created_at = tweet.get("created_at")
         if to_user:
             key = "twitter.msg.%s.%s.%s" % (iso_language_code, from_user,
                                             to_user)
@@ -42,10 +42,10 @@ def handle_tweets(twitter, producer, control_queue):
     while True:
         if question:
             tweets = twitter.searchTwitter(q=question,
-                                           since_id=since_ids[question])
-            since_ids[question] = tweets["max_id_str"]
+                                           since_id=str(since_ids[question]))
+            since_ids[question] = tweets["max_id"]
             pump_tweets(tweets, producer)
-            time.sleep(5)
+            time.sleep(3)
         if control_queue.qsize():
             message = control_queue.get(block=False)
             if message:

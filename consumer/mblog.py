@@ -28,10 +28,11 @@ def main():
         mblog_exchange = kombu.Exchange("mblog", type="topic")
         queue = kombu.Queue("twitter_posts", mblog_exchange,
                             routing_key="twitter.#")
-        consumer = kombu.Consumer(channel, queue, [handle_tweets])
+        consumer = kombu.Consumer(channel, queue, callbacks=[handle_tweets])
         consumer.consume()
+        while True:
+            connection.drain_events()
     finally:
-        connection.drain_events()
         channel.close()
         connection.close()
 
