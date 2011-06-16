@@ -8,14 +8,15 @@ Read tweets, pump them into the "tweets" topic exchange
 
 
 from collections import defaultdict
-import os
 import time
 
 import kombu
 import twython
 
+from utils import config
 
-def process_tweets(tweets, producer):
+
+def pump_tweets(tweets, producer):
     for tweet in tweets["results"]:
         from_user = tweet["from_user"]
         to_user = tweet["to_user"]
@@ -23,15 +24,18 @@ def process_tweets(tweets, producer):
         text = tweet["text"]
         created_at = tweet["created_at"]
         if to_user:
-            key = "msg.%s.%s.%s" % (iso_language_code, from_user, to_user)
+            key = "twitter.msg.%s.%s.%s" % (iso_language_code, from_user,
+                                            to_user)
         else:
-            key = "twt.%s.%s" % (iso_language_code, from_user)
+            key = "twitter.twt.%s.%s" % (iso_language_code, from_user)
 
-        producer.publish(dict(text=text, created_at=created_at),
+        producer.publish(dict(created_at=created_at, from_user=from_user,
+                              iso_language_code=iso_language_code, text=text,
+                              source="twitter"),
                          routing_key=key)
 
 
-def pump_tweets(twitter, producer, control_queue):
+def handle_tweets(twitter, producer, control_queue):
     """Read tweets and publish them using the given `producer`."""
     question = None
     since_ids = defaultdict(int)
@@ -40,7 +44,7 @@ def pump_tweets(twitter, producer, control_queue):
             tweets = twitter.searchTwitter(q=question,
                                            since_id=since_ids[question])
             since_ids[question] = tweets["max_id_str"]
-            process_tweets(tweets, producer)
+            pump_tweets(tweets, producer)
             time.sleep(5)
         if control_queue.qsize():
             message = control_queue.get(block=False)
@@ -52,31 +56,21 @@ def pump_tweets(twitter, producer, control_queue):
                     question = message.payload
 
 
-def get_twitter_config():
-    return dict(
-        twitter_token=os.environ.get("CHR_CONSUMER_KEY"),
-        twitter_secret=os.environ.get("CHR_CONSUMER_SECRET"),
-        oauth_token=os.environ.get("CHR_ACCESS_TOKEN_KEY"),
-        oauth_token_secret=os.environ.get("CHR_ACCESS_TOKEN_SECRET"))
-
-
-def main(config):
-    connection = kombu.BrokerConnection(**config)
+def main():
+    connection = kombu.BrokerConnection(**config.get_rabbitmq_config())
     channel = connection.channel()
     # By default messages sent to exchanges are persistent (delivery_mode=2),
     # and queues and exchanges are durable.
-    twitter_exchange = kombu.Exchange("twitter", type="topic")
-    producer = kombu.Producer(channel, twitter_exchange)
+    mblog_exchange = kombu.Exchange("mblog", type="topic")
+    producer = kombu.Producer(channel, mblog_exchange)
     control_queue = connection.SimpleQueue("twitter_pump")
     try:
-        twitter = twython.Twython(**get_twitter_config())
-        pump_tweets(twitter, producer, control_queue)
+        twitter = twython.Twython(**config.get_twitter_config())
+        handle_tweets(twitter, producer, control_queue)
     finally:
         channel.close()
         connection.close()
 
 
 if __name__ == '__main__':
-    config = dict(hostname="localhost", userid="guest", password="guest",
-                  virtual_host="/")
-    main(config)
+    main()
