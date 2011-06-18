@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -24,14 +25,14 @@ def pump_tweets(tweets, producer):
         text = tweet.get("text")
         created_at = tweet.get("created_at")
         if to_user:
-            key = "twitter.msg.%s.%s.%s" % (iso_language_code, from_user,
+            key = "msg.%s.%s.%s" % (iso_language_code, from_user,
                                             to_user)
         else:
-            key = "twitter.twt.%s.%s" % (iso_language_code, from_user)
+            key = "twt.%s.%s" % (iso_language_code, from_user)
 
         producer.publish(dict(created_at=created_at, from_user=from_user,
                               iso_language_code=iso_language_code, text=text,
-                              source="twitter"),
+                              to_user=to_user, source="twitter"),
                          routing_key=key)
 
 
@@ -44,8 +45,9 @@ def handle_tweets(twitter, producer, control_queue):
             tweets = twitter.searchTwitter(q=question,
                                            since_id=str(since_ids[question]))
             since_ids[question] = tweets["max_id"]
+            print(".%s=%s." % (question, len(tweets["results"])))
             pump_tweets(tweets, producer)
-            time.sleep(3)
+            time.sleep(2)
         if control_queue.qsize():
             message = control_queue.get(block=False)
             if message:
@@ -59,11 +61,10 @@ def handle_tweets(twitter, producer, control_queue):
 def main():
     connection = kombu.BrokerConnection(**config.get_rabbitmq_config())
     channel = connection.channel()
-    # By default messages sent to exchanges are persistent (delivery_mode=2),
-    # and queues and exchanges are durable.
-    mblog_exchange = kombu.Exchange("mblog", type="topic")
-    producer = kombu.Producer(channel, mblog_exchange)
-    control_queue = connection.SimpleQueue("twitter_pump")
+    twitter_exchange = kombu.Exchange("twitter", type="topic")
+    producer = kombu.Producer(channel, twitter_exchange)
+    control_queue = connection.SimpleQueue(
+        "twitter_pump", queue_opts=dict(durable=False, auto_delete=True))
     try:
         twitter = twython.Twython(**config.get_twitter_config())
         handle_tweets(twitter, producer, control_queue)

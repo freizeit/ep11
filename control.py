@@ -18,10 +18,8 @@ from utils import config
 def main(options):
     connection = kombu.BrokerConnection(**config.get_rabbitmq_config())
     channel = connection.channel()
-    # By default messages sent to exchanges are persistent,
-    # and queues and exchanges are durable.
-    control_queue = connection.SimpleQueue(options.queue,
-                                           queue_opts=dict(durable=True))
+    control_queue = connection.SimpleQueue(
+        options.queue, queue_opts=dict(durable=False, auto_delete=True))
     try:
         while True:
             cmd = raw_input(options.prompt)
