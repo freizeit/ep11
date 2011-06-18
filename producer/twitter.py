@@ -51,7 +51,6 @@ def handle_tweets(twitter, producer, control_queue):
         if control_queue.qsize():
             message = control_queue.get(block=False)
             if message:
-                message.ack()
                 if message.payload == "quit":
                     break
                 else:
@@ -63,8 +62,7 @@ def main():
     channel = connection.channel()
     twitter_exchange = kombu.Exchange("twitter", type="topic")
     producer = kombu.Producer(channel, twitter_exchange)
-    control_queue = connection.SimpleQueue(
-        "twitter_pump", queue_opts=dict(durable=False, auto_delete=True))
+    control_queue = connection.SimpleBuffer("twitter_pump")
     try:
         twitter = twython.Twython(**config.get_twitter_config())
         handle_tweets(twitter, producer, control_queue)

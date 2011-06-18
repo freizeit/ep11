@@ -18,14 +18,15 @@ from utils import config
 def main(options):
     connection = kombu.BrokerConnection(**config.get_rabbitmq_config())
     channel = connection.channel()
-    control_queue = connection.SimpleQueue(
-        options.queue, queue_opts=dict(durable=False, auto_delete=True))
+    control_queue = connection.SimpleBuffer(options.queue)
     try:
         while True:
             cmd = raw_input(options.prompt)
+            cmd = cmd.strip()
             control_queue.put(
-                cmd.strip(),
-                delivery_mode=kombu.entity.TRANSIENT_DELIVERY_MODE)
+                cmd, delivery_mode=kombu.entity.TRANSIENT_DELIVERY_MODE)
+            if cmd == "quit":
+                break
     finally:
         channel.close()
         connection.close()
