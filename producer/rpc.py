@@ -9,7 +9,6 @@ Simple RPC example producer.
 
 
 import os
-import sys
 
 import pika
 
@@ -30,10 +29,12 @@ def on_channel_open(new_channel):
     """Called when our channel has opened"""
     global channel
     channel = new_channel
+
     channel.exchange_declare(exchange="rpc_ctl", durable=False,
                              auto_delete=True)
     channel.queue_declare(queue="rpc_ctl", durable=False, auto_delete=True,
                           callback=on_ctl_queue_declared)
+
     channel.exchange_declare(exchange="rpc", durable=False, auto_delete=True)
     channel.queue_declare(durable=False, auto_delete=True,
                           exclusive=True, callback=on_queue_declared)
