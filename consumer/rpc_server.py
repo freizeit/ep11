@@ -4,19 +4,19 @@
 
 
 """
-Simple RPC server. Adapted from
+Simple RPC server, adapted from
     http://pika.github.com/connecting.html#continuation-passing-style
 """
 
+
+import simplejson
 
 import pika
 
 from utils import config
 
 
-connection = None
 channel = None
-result_queue = None
 
 
 def on_connected(connection):
@@ -30,48 +30,26 @@ def on_channel_open(new_channel):
     global channel
     channel = new_channel
 
-    channel.exchange_declare(exchange="rpc_ctl", durable=False,
-                             auto_delete=True)
-    channel.queue_declare(queue="rpc_ctl", durable=False, auto_delete=True,
-                          callback=on_ctl_queue_declared)
-
     channel.exchange_declare(exchange="rpc", durable=False, auto_delete=True)
-    channel.queue_declare(queue="jobs", durable=False, auto_delete=True)
-    channel.queue_declare(durable=False, auto_delete=True,
-                          exclusive=True, callback=on_result_queue_declared)
+    channel.queue_declare(queue="jobs", durable=False, auto_delete=True,
+                          callback=on_job_queue_declared)
 
 
-def on_ctl_queue_declared(_):
-    """Called when the control queue has been declared."""
-    channel.basic_consume(handle_ctl_msg, queue='rpc_ctl')
+def on_job_queue_declared(frame):
+    """Called when the RPC job queue has been declared."""
+    channel.basic_consume(handle_job, queue="jobs")
+    channel.queue_bind(exchange="rpc", queue="jobs", routing_key="jobs")
 
 
-def on_result_queue_declared(frame):
-    """
-    Called when the RPC resuults queue has been declared, the generated
-    name is in the frame (response from RabbitMQ).
-    """
-    global result_queue
-    result_queue = frame.method.queue
-    channel.basic_consume(handle_result, queue=result_queue)
+def handle_job(channel, method, header, body):
+    """Called when we receive an RPC job message."""
+    print "> RPC job: %s" % body
+    channel.basic_ack(delivery_tag=method.delivery_tag)
 
-
-def handle_ctl_msg(channel, method, header, body):
-    """Called when we receive a control message from the shell."""
-    body = body.strip()
-    print "* Control message: %s" % body
-    if body == "quit":
-        connection.close()
-        connection.ioloop.start()
-    else:
-        channel.basic_publish(exchange="rpc", routing_key="jobs", body=body,
-            properties=pika.BasicProperties(
-                delivery_mode=1, reply_to=result_queue))
-
-
-def handle_result(channel, method, header, body):
-    """Called when we receive an RPC result message."""
-    print "> RPC result: %s" % body
+    ints = simplejson.loads(body)
+    channel.basic_publish(exchange="rpc", routing_key=header.reply_to,
+        body=simplejson.dumps(sum(ints)),
+        properties=pika.BasicProperties(delivery_mode=1))
 
 
 connection = pika.adapters.SelectConnection(config.pika_params(), on_connected)

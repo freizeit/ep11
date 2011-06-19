@@ -4,7 +4,7 @@
 
 
 """
-Simple RPC example producer. Adapted from
+Simple RPC client, adapted from
     http://pika.github.com/connecting.html#continuation-passing-style
 """
 
@@ -54,12 +54,16 @@ def on_result_queue_declared(frame):
     global result_queue
     result_queue = frame.method.queue
     channel.basic_consume(handle_result, queue=result_queue)
+    channel.queue_bind(exchange="rpc", queue=result_queue,
+                       routing_key=result_queue)
 
 
 def handle_ctl_msg(channel, method, header, body):
     """Called when we receive a control message from the shell."""
     body = body.strip()
     print "* Control message: %s" % body
+    channel.basic_ack(delivery_tag=method.delivery_tag)
+
     if body == "quit":
         connection.close()
         connection.ioloop.start()
