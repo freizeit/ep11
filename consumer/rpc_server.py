@@ -43,13 +43,14 @@ def on_job_queue_declared(frame):
 
 def handle_job(channel, method, header, body):
     """Called when we receive an RPC job message."""
-    print "> RPC job: %s" % body
+    print "* Rcvd job: %s" % body
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
     ints = simplejson.loads(body)
+    result = simplejson.dumps(sum(ints))
     channel.basic_publish(exchange="rpc", routing_key=header.reply_to,
-        body=simplejson.dumps(sum(ints)),
-        properties=pika.BasicProperties(delivery_mode=1))
+        body=result, properties=pika.BasicProperties(delivery_mode=1))
+    print "> Sent result: %s" % result
 
 
 connection = pika.adapters.SelectConnection(config.pika_params(), on_connected)

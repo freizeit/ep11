@@ -61,7 +61,7 @@ def on_result_queue_declared(frame):
 def handle_ctl_msg(channel, method, header, body):
     """Called when we receive a control message from the shell."""
     body = body.strip()
-    print "* Control message: %s" % body
+    print "* Rcvd ctrl msg: %s" % body
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
     if body == "quit":
@@ -76,6 +76,7 @@ def handle_ctl_msg(channel, method, header, body):
 def handle_result(channel, method, header, body):
     """Called when we receive an RPC result message."""
     print "> RPC result: %s" % body
+    channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
 connection = pika.adapters.SelectConnection(config.pika_params(), on_connected)
