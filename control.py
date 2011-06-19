@@ -9,6 +9,8 @@ Control the various amqp producers and consumers.
 
 
 from optparse import OptionParser
+import re
+import simplejson
 
 import kombu
 
@@ -16,6 +18,8 @@ from utils import config
 
 
 def main(options):
+    list_of_ints_re = re.compile("^\s*(\d+)(\s*,+\s*\d+)*\s*$")
+    delimiter_re = re.compile("\s*,\s*")
     connection = kombu.BrokerConnection(**config.get_rabbitmq_config())
     channel = connection.channel()
     control_queue = connection.SimpleBuffer(options.queue)
@@ -23,6 +27,9 @@ def main(options):
         while True:
             cmd = raw_input(options.prompt)
             cmd = cmd.strip()
+            if list_of_ints_re.match(cmd):
+                cmd = simplejson.dumps(
+                    [int(i) for i in delimiter_re.split(cmd) if i])
             control_queue.put(
                 cmd, delivery_mode=kombu.entity.TRANSIENT_DELIVERY_MODE)
             if cmd == "quit":

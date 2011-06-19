@@ -4,27 +4,27 @@
 
 
 """
-Simple RPC example producer.
+Simple RPC server. Adapted from
+    http://pika.github.com/connecting.html#continuation-passing-style
 """
 
 
-import os
-
 import pika
+
+from utils import config
 
 
 connection = None
 channel = None
+result_queue = None
 
 
-# Step #2
 def on_connected(connection):
     """Called when we are fully connected to RabbitMQ"""
     # Open a channel
     connection.channel(on_channel_open)
 
 
-# Step #3
 def on_channel_open(new_channel):
     """Called when our channel has opened"""
     global channel
@@ -36,47 +36,45 @@ def on_channel_open(new_channel):
                           callback=on_ctl_queue_declared)
 
     channel.exchange_declare(exchange="rpc", durable=False, auto_delete=True)
+    channel.queue_declare(queue="jobs", durable=False, auto_delete=True)
     channel.queue_declare(durable=False, auto_delete=True,
-                          exclusive=True, callback=on_queue_declared)
+                          exclusive=True, callback=on_result_queue_declared)
 
 
-# Step #4
-def on_ctl_queue_declared(frame):
-    """
-    Called when RabbitMQ has told us our Queue has been declared, frame is
-    the response from RabbitMQ.
-    """
+def on_ctl_queue_declared(_):
+    """Called when the control queue has been declared."""
     channel.basic_consume(handle_ctl_msg, queue='rpc_ctl')
 
-def on_queue_declared(frame):
+
+def on_result_queue_declared(frame):
     """
-    Called when RabbitMQ has told us our Queue has been declared, frame is
-    the response from RabbitMQ.
+    Called when the RPC resuults queue has been declared, the generated
+    name is in the frame (response from RabbitMQ).
     """
-    channel.basic_consume(handle_rpc_msg, queue=frame.method.queue)
+    global result_queue
+    result_queue = frame.method.queue
+    channel.basic_consume(handle_result, queue=result_queue)
 
 
-# Step #5
 def handle_ctl_msg(channel, method, header, body):
-    """Called when we receive a message from RabbitMQ"""
+    """Called when we receive a control message from the shell."""
     body = body.strip()
-    print body
+    print "* Control message: %s" % body
     if body == "quit":
         connection.close()
         connection.ioloop.start()
+    else:
+        channel.basic_publish(exchange="rpc", routing_key="jobs", body=body,
+            properties=pika.BasicProperties(
+                delivery_mode=1, reply_to=result_queue))
 
 
-def handle_rpc_msg(channel, method, header, body):
-    """Called when we receive a message from RabbitMQ"""
-    print body
+def handle_result(channel, method, header, body):
+    """Called when we receive an RPC result message."""
+    print "> RPC result: %s" % body
 
 
-# Step #1: Connect to RabbitMQ
-user = os.environ.get("EP11_RABBITMQ_USERID", "guest")
-passwd = os.environ.get("EP11_RABBITMQ_PASSWORD", "guest")
-credentials = pika.PlainCredentials(user, passwd)
-parameters = pika.ConnectionParameters(credentials=credentials)
-connection = pika.adapters.SelectConnection(parameters, on_connected)
+connection = pika.adapters.SelectConnection(config.pika_params(), on_connected)
 
 
 try:
