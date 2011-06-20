@@ -48,7 +48,7 @@ def on_ctl_queue_declared(_):
 
 def on_result_queue_declared(frame):
     """
-    Called when the RPC resuults queue has been declared, the generated
+    Called when the RPC results queue has been declared, the generated
     name is in the frame (response from RabbitMQ).
     """
     global result_queue

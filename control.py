@@ -34,8 +34,8 @@ def main(options):
                 cmd = cmd.encode("rot13")
             control_queue.put(
                 cmd, delivery_mode=kombu.entity.TRANSIENT_DELIVERY_MODE)
-            do_quit = (cmd == "quit" and not options.encode or
-                       options.encrypt and cmd.decode("rot13") == "quit")
+            do_quit = ((cmd == "quit" and not options.encrypt) or
+                       (options.encrypt and cmd.decode("rot13") == "quit"))
             if do_quit:
                 break
     finally:
