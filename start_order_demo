@@ -1,0 +1,9 @@
+#!/bin/bash
+
+cd /home/muharem/src/ep2011
+
+gnome-terminal --title="Order validation" --geometry 80x19+1442+24 -e "consumer/order_validator.py"
+gnome-terminal --title="Order processing" --geometry 80x19+1960+24 -e "consumer/order_processor.py"
+gnome-terminal --title="Order processing control" --geometry 80x19+1442+391 -e './control.py -e -q incoming -p "> "' && pkill python
+
+gvim -geometry 80x33+305+24 ./consumer/order_validator.py ./consumer/order_processor.py
