@@ -1,0 +1,10 @@
+#!/bin/bash
+
+cd /home/muharem/src/ep2011
+
+gnome-terminal --title='Matching tweets -> exchange' --geometry 80x19+1442+24 -e "producer/twitter.py"
+gnome-terminal --title="Tweets" --geometry 80x19+1960+24 -e "consumer/twitter.py -p 'twt.#'"
+gnome-terminal --title="Direct messages" --geometry 80x19+1964+391 -e "consumer/twitter.py -p 'msg.#'"
+gnome-terminal --title="Twitter search topics" --geometry 80x19+1442+391 -e './control.py -q twitter_pump -p "> "'
+
+gvim -geometry 80x35+1673+24 ./producer/twitter.py ./consumer/twitter.py

@@ -47,7 +47,7 @@ def handle_tweets(twitter, producer, control_queue):
             since_ids[question] = tweets["max_id"]
             print(".%s=%s." % (question, len(tweets["results"])))
             pump_tweets(tweets, producer)
-            time.sleep(2)
+            time.sleep(1)
         if control_queue.qsize():
             message = control_queue.get(block=False)
             if message:
