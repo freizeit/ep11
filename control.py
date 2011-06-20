@@ -30,9 +30,13 @@ def main(options):
             if list_of_ints_re.match(cmd):
                 cmd = simplejson.dumps(
                     [int(i) for i in delimiter_re.split(cmd) if i])
+            if options.encrypt:
+                cmd = cmd.encode("rot13")
             control_queue.put(
                 cmd, delivery_mode=kombu.entity.TRANSIENT_DELIVERY_MODE)
-            if cmd == "quit":
+            do_quit = (cmd == "quit" and not options.encode or
+                       options.encrypt and cmd.decode("rot13") == "quit")
+            if do_quit:
                 break
     finally:
         channel.close()
@@ -45,5 +49,7 @@ if __name__ == '__main__':
                       help="the prompt to display to user")
     parser.add_option("-q", "--queue", dest="queue",
                       help="the name of the control queue")
+    parser.add_option("-e", "--encrypt", action="store_true", dest="encrypt",
+                      help="Encrypt payloads using rot13")
     (options, args) = parser.parse_args()
     main(options)

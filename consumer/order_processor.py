@@ -67,7 +67,7 @@ def on_orders_queue_declared(frame):
 
 def decrypt(channel, method, header, body):
     """Called when we receive an encrypted order."""
-    print "* Encrypted order: %s" % body
+    print "\n* Encrypted order: %s" % body
     body = body.decode("rot13")
     if body == "quit":
         connection.close()
@@ -94,14 +94,14 @@ def authenticate(channel, method, header, body):
     else:
         channel.basic_publish(exchange="orders", routing_key="validated",
                               body=order)
-    print "> Authenticated: %s" % order
+        print "> Authenticated: %s" % order
 
 
 def process(channel, method, header, body):
     """Called with a validated order."""
     print "* Validated: %s" % body
     channel.basic_ack(delivery_tag=method.delivery_tag)
-    print "> Processed: %s" % result
+    print "> Processed: %s" % body
 
 
 connection = pika.adapters.SelectConnection(config.pika_params(), on_connected)
