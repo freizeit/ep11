@@ -1,0 +1,10 @@
+#!/bin/bash
+
+cd /home/muharem/src/ep2011
+
+gnome-terminal --title="RPC client" --geometry 80x19+2+24 -e "producer/rpc_client.py"
+gnome-terminal --title="RPC server 1" --geometry 80x19+665+24 -e "consumer/rpc_server.py"
+gnome-terminal --title="RPC server 2" --geometry 80x19+668+391 -e "consumer/rpc_server.py"
+gnome-terminal --title="RPC control" --geometry 80x19+2+393 -e './control.py -q rpc_ctl -p "> "'
+
+gvim -geometry 80x33+305+24 producer/rpc_client.py producer/rpc_server.py
