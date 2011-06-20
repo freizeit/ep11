@@ -65,6 +65,8 @@ def handle_ctl_msg(channel, method, header, body):
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
     if body == "quit":
+        channel.basic_publish(exchange="rpc", routing_key="jobs", body=body,
+            properties=pika.BasicProperties(delivery_mode=1))
         connection.close()
         connection.ioloop.start()
     else:

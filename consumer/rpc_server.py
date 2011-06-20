@@ -44,6 +44,11 @@ def on_job_queue_declared(frame):
 def handle_job(channel, method, header, body):
     """Called when we receive an RPC job message."""
     print "* Rcvd job: %s" % body
+    if body == "quit":
+        connection.close()
+        connection.ioloop.start()
+        return
+
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
     ints = simplejson.loads(body)
