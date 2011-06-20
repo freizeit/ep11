@@ -8,3 +8,8 @@ gnome-terminal --title="Direct messages" --geometry 80x19+1964+391 -e "consumer/
 gnome-terminal --title="Twitter search topics" --geometry 80x19+1442+391 -e './control.py -q twitter_pump -p "> "'
 
 gvim -geometry 80x35+1673+24 ./producer/twitter.py ./consumer/twitter.py
+
+echo ""
+echo "Press <enter> to continue"
+read
+pkill python

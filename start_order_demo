@@ -7,3 +7,8 @@ gnome-terminal --title="Order processing" --geometry 80x19+1960+24 -e "consumer/
 gnome-terminal --title="Order processing control" --geometry 80x19+1442+391 -e './control.py -e -q incoming -p "> "' && pkill python
 
 gvim -geometry 80x33+305+24 ./consumer/order_validator.py ./consumer/order_processor.py
+
+echo ""
+echo "Press <enter> to continue"
+read
+pkill python

@@ -8,3 +8,8 @@ gnome-terminal --title="RPC server 2" --geometry 80x19+1964+391 -e "consumer/rpc
 gnome-terminal --title="RPC control" --geometry 80x19+1442+391 -e './control.py -q rpc_ctl -p "> "'
 
 gvim -geometry 80x35+1673+24 ./producer/rpc_client.py ./consumer/rpc_server.py
+
+echo ""
+echo "Press <enter> to continue"
+read
+pkill python
