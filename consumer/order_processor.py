@@ -13,35 +13,32 @@ import pika
 from utils import config
 
 
-__channel = None
-
-
 def on_connected(connection):
     """Called when we are fully connected to RabbitMQ"""
     # Open a channel
     connection.channel(on_channel_open)
 
 
-def on_channel_open(new_channel):
+def on_channel_open(channel):
     """Called when our channel has opened"""
-    global __channel
-    __channel = new_channel
+    config.set("channel", channel)
 
     # Fanout exchange + queues for validated orders.
-    __channel.exchange_declare(exchange="orders", durable=False, type="fanout",
+    channel.exchange_declare(exchange="orders", durable=False, type="fanout",
                              auto_delete=True)
-    __channel.queue_declare(queue="validated", durable=False,
+    channel.queue_declare(queue="validated", durable=False,
                           auto_delete=True, callback=on_orders_queue_declared)
 
 
 def on_orders_queue_declared(frame):
     """Called when a queue has been declared on the `orders` exchange."""
+    channel = config.get("channel")
     callbacks = dict(validated=process)
     queue_name  = frame.method.queue
     assert queue_name in callbacks, "Unknown queue: %s" % queue_name
 
-    __channel.basic_consume(callbacks[queue_name], queue=queue_name)
-    __channel.queue_bind(exchange="orders", queue=queue_name)
+    channel.basic_consume(callbacks[queue_name], queue=queue_name)
+    channel.queue_bind(exchange="orders", queue=queue_name)
 
 
 def process(channel, method, header, body):

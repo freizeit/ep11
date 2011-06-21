@@ -16,19 +16,15 @@ import pika
 from utils import config
 
 
-channel = None
-
-
 def on_connected(connection):
     """Called when we are fully connected to RabbitMQ"""
     # Open a channel
     connection.channel(on_channel_open)
 
 
-def on_channel_open(new_channel):
+def on_channel_open(channel):
     """Called when our channel has opened"""
-    global channel
-    channel = new_channel
+    config.set("channel", channel)
 
     channel.exchange_declare(exchange="rpc", durable=False, auto_delete=True)
     channel.queue_declare(queue="jobs", durable=False, auto_delete=True,
@@ -37,6 +33,7 @@ def on_channel_open(new_channel):
 
 def on_job_queue_declared(frame):
     """Called when the RPC job queue has been declared."""
+    channel = config.get("channel")
     channel.basic_consume(handle_job, queue="jobs")
     channel.queue_bind(exchange="rpc", queue="jobs", routing_key="jobs")
 

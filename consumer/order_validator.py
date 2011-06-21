@@ -14,39 +14,36 @@ import pika
 from utils import config
 
 
-__channel = None
-
-
 def on_connected(connection):
     """Called when we are fully connected to RabbitMQ"""
     # Open a channel
     connection.channel(on_channel_open)
 
 
-def on_channel_open(new_channel):
+def on_channel_open(channel):
     """Called when our channel has opened"""
-    global __channel
-    __channel = new_channel
+    config.set("channel", channel)
 
     # Preprocessing exchange + queues for non-validated orders.
-    __channel.exchange_declare(exchange="incoming", durable=False,
-                               type="direct", auto_delete=True)
-    __channel.queue_declare(queue="incoming", durable=False, auto_delete=True,
+    channel.exchange_declare(exchange="incoming", durable=False,
+                             type="direct", auto_delete=True)
+    channel.queue_declare(queue="incoming", durable=False, auto_delete=True,
                           callback=on_incoming_queue_declared)
-    __channel.queue_declare(queue="decrypted", durable=False, auto_delete=True,
+    channel.queue_declare(queue="decrypted", durable=False, auto_delete=True,
                           callback=on_incoming_queue_declared)
-    __channel.exchange_declare(exchange="orders", durable=False, type="fanout",
+    channel.exchange_declare(exchange="orders", durable=False, type="fanout",
                              auto_delete=True)
 
 
 def on_incoming_queue_declared(frame):
     """Called when a queue has been declared on the `incoming` exchange."""
+    channel = config.get("channel")
     callbacks = dict(incoming=decrypt, decrypted=authenticate)
     queue_name  = frame.method.queue
     assert queue_name in callbacks, "Unknown queue: %s" % queue_name
 
-    __channel.basic_consume(callbacks[queue_name], queue=queue_name)
-    __channel.queue_bind(exchange="incoming", queue=queue_name,
+    channel.basic_consume(callbacks[queue_name], queue=queue_name)
+    channel.queue_bind(exchange="incoming", queue=queue_name,
                        routing_key="rk-%s" % queue_name)
 
 
