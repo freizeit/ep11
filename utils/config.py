@@ -62,4 +62,4 @@ def set(name, value):
 
 
 def get(name):
-    Config().get(name)
+    return Config().get(name)
